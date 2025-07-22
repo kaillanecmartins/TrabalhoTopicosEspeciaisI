@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import plotly.express as px
 
 st.set_page_config(layout="wide")
 st.title('Filmes de Terror')
@@ -26,6 +27,9 @@ cols_to_drop = ['poster_path', 'backdrop_path', 'overview',
                 'tagline', 'adult', 'status', 'collection_name', 'collection', 'profit', 'budget', 'original_title', 'revenue']
 df = df.drop(columns=cols_to_drop)  # deu erro pq eu ja havia rodado
 
+# df_filtered = df['original_language'].value_counts()
+
+# fig_language = px.bar(df_filtered)
 
 # configurando streamlit
 
