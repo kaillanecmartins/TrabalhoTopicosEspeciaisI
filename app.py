@@ -24,14 +24,12 @@ df_horror = df[df['genres'].apply(lambda x: 'Horror' in x if isinstance(
     x, list) else False)]  # criando filtro apenas do genero horror
 
 cols_to_drop = ['poster_path', 'backdrop_path', 'overview',
-                'tagline', 'adult', 'status', 'collection_name', 'collection', 'profit', 'budget', 'original_title', 'revenue']
+                'tagline', 'adult', 'status', 'collection_name', 'collection', 'profit', 'budget', 'original_title']
 df = df.drop(columns=cols_to_drop)  # deu erro pq eu ja havia rodado
 
 # df_filtered = df['original_language'].value_counts()
 
 # fig_language = px.bar(df_filtered)
-
-# configurando streamlit
 
 # ordenando dados por ano
 
@@ -41,11 +39,18 @@ df = df.sort_values('release_date')
 
 year = st.sidebar.selectbox("Ano", df['year'].unique())
 
-col1, col2 = st.columns(2)
-col3, col4, col5 = st.columns(3)
-
 # aplicando filtros por ano
 df_filtered = df[df['year'] == year]
 
 # mostrando na tela dados por ano
 st.dataframe(df_filtered)
+
+# organizando estrutura do dashboard
+col1, col2 = st.columns(2)
+col3, col4, col5 = st.columns(3)
+
+
+fig_date = px.bar(df, x="year", y="popularity",
+                  title="Faturamento por filme")
+
+col1.plotly_chart(fig_date)
