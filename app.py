@@ -33,8 +33,19 @@ df = df.drop(columns=cols_to_drop)  # deu erro pq eu ja havia rodado
 
 # configurando streamlit
 
+# ordenando dados por ano
+
+df = df.sort_values('release_date')
+
+# sidebar com ano
+
+year = st.sidebar.selectbox("Ano", df['year'].unique())
+
 col1, col2 = st.columns(2)
 col3, col4, col5 = st.columns(3)
 
-# mostrando na tela
-st.dataframe(df)
+# aplicando filtros por ano
+df_filtered = df[df['year'] == year]
+
+# mostrando na tela dados por ano
+st.dataframe(df_filtered)
