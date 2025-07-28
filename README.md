@@ -1,4 +1,4 @@
-# Dashboard Horror Movies
+# Dashboard Horror Movies 💀
 
 ### Requisitos mínimos:
 - Python: 3.13

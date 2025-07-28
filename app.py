@@ -122,6 +122,7 @@ with tab3:
 
         col1, col2 = st.columns(2)
         with col1:
+            st.text("5 filmes mais lucrativos")
             profitable_movies = filtered_df.dropna(subset=['profit']).sort_values('profit', ascending=False).head(5)[
                 ['title', 'budget', 'revenue', 'profit', 'profit_margin']
             ]
@@ -133,6 +134,7 @@ with tab3:
             }), height=220)
 
         with col2:
+            st.text("5 filmes com maiores prejuízos")
             loss_movies = filtered_df.dropna(subset=['loss']).sort_values('loss', ascending=False).head(5)[
                 ['title', 'budget', 'revenue', 'loss']
             ]
