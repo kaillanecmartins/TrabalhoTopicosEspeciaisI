@@ -1,56 +1,191 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import plotly.express as px
+import plotly.graph_objects as go
 
-st.set_page_config(layout="wide")
-st.title('Filmes de Terror')
-st.text('Analisando dados sobre filmes de terror')
+# Importar estilo
+with open("styles.css") as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# carregando dados
-df = pd.read_csv('horror_movies.csv')
-df.set_index('id', inplace=True)
+# Configuração da página
+st.set_page_config(page_title="Análise de Filmes de Terror",
+                   page_icon='💀', layout="wide")
 
-df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')
+# Título do aplicativo
+st.title("Análise Completa de Filmes de Terror")
 
-df['year'] = df['release_date'].dt.year  # criando coluna de ano
+# Carregar os dados
 
-df['profit'] = df['revenue'] - df['budget']  # criando coluna lucro
 
-# criando coluna de lista de generos pra cada filme
-df['genres'] = df['genre_names'].str.split(', ')
+@st.cache_data
+def load_data():
+    df = pd.read_csv("horror_movies_limpo.csv")
+    df['release_year'] = pd.to_datetime(df['release_date']).dt.year
+    df['profit_margin'] = (df['profit'] / df['revenue']) * \
+        100 if 'profit' in df.columns and 'revenue' in df.columns else None
+    return df
 
-df_horror = df[df['genres'].apply(lambda x: 'Horror' in x if isinstance(
-    x, list) else False)]  # criando filtro apenas do genero horror
 
-cols_to_drop = ['poster_path', 'backdrop_path', 'overview',
-                'tagline', 'adult', 'status', 'collection_name', 'collection', 'profit', 'budget', 'original_title']
-df = df.drop(columns=cols_to_drop)  # deu erro pq eu ja havia rodado
+df = load_data()
 
-# df_filtered = df['original_language'].value_counts()
+st.sidebar.markdown("💀 **HORROR MOVIES**")
+st.sidebar.markdown("---")
 
-# fig_language = px.bar(df_filtered)
+# Sidebar com filtros
+st.sidebar.header("Filtros")
+year_range = st.sidebar.slider(
+    "Ano de lançamento",
+    min_value=int(df['release_year'].min()),
+    max_value=int(df['release_year'].max()),
+    value=(2010, 2022)
+)
 
-# ordenando dados por ano
+rating_filter = st.sidebar.slider(
+    "Avaliação mínima",
+    min_value=0.0,
+    max_value=10.0,
+    value=6.0,
+    step=0.1
+)
 
-df = df.sort_values('release_date')
+genre_options = [
+    'Todos'] + sorted(df['genre_names'].str.split(', ').explode().unique().tolist())
+selected_genre = st.sidebar.selectbox("Gênero", genre_options)
 
-# sidebar com ano
+# Aplicar filtros
+filtered_df = df[
+    (df['release_year'] >= year_range[0]) &
+    (df['release_year'] <= year_range[1]) &
+    (df['vote_average'] >= rating_filter)
+]
 
-year = st.sidebar.selectbox("Ano", df['year'].unique())
+if selected_genre != 'Todos':
+    filtered_df = filtered_df[filtered_df['genre_names'].str.contains(
+        selected_genre, na=False)]
 
-# aplicando filtros por ano
-df_filtered = df[df['year'] == year]
+# Seção 1: Métricas Principais
+st.header("Métricas Principais")
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Total de Filmes", len(filtered_df))
+col2.metric("Avaliação Média", f"{filtered_df['vote_average'].mean():.1f}")
+col3.metric("Duração Média", f"{filtered_df['runtime'].mean():.0f} min")
+if 'profit' in filtered_df.columns:
+    col4.metric(
+        "Lucro Médio", f"${filtered_df['profit'].mean()/1e6:.1f}M" if not filtered_df['profit'].isna().all() else "N/A")
 
-# mostrando na tela dados por ano
-st.dataframe(df_filtered)
+# Seção 2: Distribuição e Relacionamentos
+st.header("Distribuição e Relacionamentos")
 
-# organizando estrutura do dashboard
 col1, col2 = st.columns(2)
-col3, col4, col5 = st.columns(3)
+with col1:
+    st.subheader("Distribuição de Avaliações")
+    fig = px.histogram(filtered_df, x='vote_average', nbins=20,
+                       labels={'vote_average': 'Avaliação Média'}, color_discrete_sequence=['#990000'])
+    st.plotly_chart(fig, use_container_width=True)
 
+with col2:
+    st.subheader("Duração vs Avaliação")
+    fig = px.scatter(filtered_df, x='runtime', y='vote_average',
+                     hover_data=['title'],
+                     labels={'runtime': 'Duração (min)', 'vote_average': 'Avaliação'}, color_discrete_sequence=['#990000'])
+    st.plotly_chart(fig, use_container_width=True)
 
-fig_date = px.bar(df, x="year", y="popularity",
-                  title="Faturamento por filme")
+st.markdown("---")
+# Seção 3: Análise Temporal
+st.header("Evolução Temporal")
 
-col1.plotly_chart(fig_date)
+col1, col2 = st.columns(2)
+with col1:
+    st.subheader("Lançamentos por Ano")
+    movies_per_year = filtered_df['release_year'].value_counts().sort_index()
+    fig = px.line(movies_per_year, labels={
+                  'index': 'Ano', 'value': 'Número de Filmes'}, color_discrete_sequence=['#990000'])
+    st.plotly_chart(fig, use_container_width=True)
+
+with col2:
+    st.subheader("Avaliação Média por Ano")
+    yearly_ratings = filtered_df.groupby(
+        'release_year')['vote_average'].mean().reset_index()
+    fig = px.line(yearly_ratings, x='release_year', y='vote_average',
+                  labels={'release_year': 'Ano', 'vote_average': 'Avaliação Média'}, color_discrete_sequence=['#990000'])
+    st.plotly_chart(fig, use_container_width=True)
+
+st.markdown("---")
+
+# Seção 4: Gêneros
+st.header("Análise de Gêneros")
+
+col1, col2 = st.columns(2)
+with col1:
+    st.subheader("Gêneros Mais Comuns")
+    genre_counts = filtered_df['genre_names'].str.split(
+        ', ').explode().value_counts().head(10)
+    fig = px.bar(genre_counts, orientation='h',
+                 labels={'index': 'Gênero', 'value': 'Contagem'}, color_discrete_sequence=['#990000'])
+    st.plotly_chart(fig, use_container_width=True)
+
+with col2:
+    st.subheader("Duração Média por Gênero")
+    genre_runtime = filtered_df.explode('genre_names').groupby(
+        'genre_names')['runtime'].mean().sort_values(ascending=False).head(10)
+    fig = px.bar(genre_runtime, orientation='h',
+                 labels={'index': 'Gênero', 'value': 'Duração Média (min)'}, color_discrete_sequence=['#990000'])
+    st.plotly_chart(fig, use_container_width=True)
+
+st.markdown("---")
+
+# Seção 5: Análise Financeira (se disponível)
+if 'profit' in filtered_df.columns and not filtered_df['profit'].isna().all():
+    st.header("Performance Financeira")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Orçamento vs Receita")
+        fig = px.scatter(filtered_df.dropna(subset=['budget', 'revenue']),
+                         x='budget', y='revenue', color='vote_average',
+                         hover_data=['title'],
+                         labels={'budget': 'Orçamento', 'revenue': 'Receita'}, color_discrete_sequence=['#990000'])
+        st.plotly_chart(fig, use_container_width=True)
+
+    with col2:
+        st.subheader("Margem de Lucro por Ano")
+        yearly_profit = filtered_df.dropna(subset=['profit_margin']).groupby(
+            'release_year')['profit_margin'].mean().reset_index()
+        fig = px.line(yearly_profit, x='release_year', y='profit_margin',
+                      labels={'release_year': 'Ano', 'profit_margin': 'Margem de Lucro (%)'}, color_discrete_sequence=['#990000'])
+        st.plotly_chart(fig, use_container_width=True)
+
+    st.subheader("Top Filmes por Lucro")
+    profitable_movies = filtered_df.dropna(subset=['profit']).sort_values('profit', ascending=False).head(5)[
+        ['title', 'release_year', 'budget', 'revenue', 'profit', 'profit_margin']
+    ]
+    st.dataframe(profitable_movies.style.format({
+        'budget': '${:,.0f}',
+        'revenue': '${:,.0f}',
+        'profit': '${:,.0f}',
+        'profit_margin': '{:.1f}%'
+    }), height=210)
+
+st.markdown("---")
+# Seção 6: Tabelas de Destaque
+st.header("Filmes em Destaque")
+
+col1, col2 = st.columns(2)
+with col1:
+    st.subheader("Mais Populares")
+    top_movies = filtered_df.sort_values('popularity', ascending=False).head(5)[
+        ['title', 'release_year', 'popularity', 'genre_names']
+    ]
+    st.dataframe(top_movies, height=210)
+
+with col2:
+    st.subheader("Melhores Avaliados")
+    top_rated = filtered_df.sort_values('vote_average', ascending=False).head(5)[
+        ['title', 'release_year', 'vote_average', 'genre_names']
+    ]
+    st.dataframe(top_rated, height=210)
+
+# Rodapé
+st.markdown("---")
+st.caption(
+    "Dashboard criado para análise de filmes de terror, para a disciplina de Tópicos Especiais I")
