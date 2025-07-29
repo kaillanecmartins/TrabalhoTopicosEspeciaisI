@@ -8,14 +8,14 @@ from plotly.subplots import make_subplots
 # with open("styles.css") as f:
 #    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# Page configuration
+# configurações da página
 st.set_page_config(page_title="Análise de Filmes de Terror",
                    page_icon='💀', layout="wide")
 
 # Title
 st.title("💀 Análise de Filmes de Terror")
 
-# Load data
+# carregando dados
 
 
 @st.cache_data
@@ -29,7 +29,7 @@ def load_data():
 
 df = load_data()
 
-# Sidebar filters
+# Sidebar com filtros
 st.sidebar.markdown("💀 **HORROR MOVIES**")
 st.sidebar.markdown("---")
 st.sidebar.header("Filtros")
@@ -52,7 +52,7 @@ genre_options = [
     'Todos'] + sorted(df['genre_names'].str.split(', ').explode().unique().tolist())
 selected_genre = st.sidebar.selectbox("Gênero", genre_options)
 
-# Apply filters
+# Aplicando filtros
 filtered_df = df[
     (df['release_year'] >= year_range[0]) &
     (df['release_year'] <= year_range[1]) &
@@ -73,7 +73,7 @@ if 'profit' in filtered_df.columns:
     col4.metric(
         "Lucro Médio", f"${filtered_df['profit'].mean()/1e6:.1f}M" if not filtered_df['profit'].isna().all() else "N/A")
 
-# Main tabs
+# Tabs principais
 tab1, tab2, tab3, tab4 = st.tabs(
     ["Overview", "Filmes", "Financeiro", "Temporal"])
 
@@ -187,7 +187,9 @@ with tab4:
                   labels={'release_year': 'Ano', 'runtime': 'Duração Média (min)'}, color_discrete_sequence=['#990000'])
     st.plotly_chart(fig, use_container_width=True)
 
-# Add some space at the bottom
+# rodapé
 st.markdown("---")
+st.caption("Dashboard criado para análise de filmes de terror. ")
 st.caption(
-    "Dashboard criado para análise de filmes de terror. Dados atualizados em 2023.")
+    "Dashboard para a Disciplina de Tópicos Especiais I - Prof. Josenildo da Silva")
+st.caption("Grupo: Kaillane Martins, Kateriny Bispo, Kauan Kenney, Marcos Cardoso")
